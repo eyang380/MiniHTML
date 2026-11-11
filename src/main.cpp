@@ -41,14 +41,52 @@ std::string escapeWhitespace(const std::string& text) {
 }
 
 int main() {
-    std::string html = R"(
+    std::string teststring = R"(
+<!DOCTYPE html>
+<!-- Page comment -->
+
+<html>
+    <head>
+        <title>My Website</title>
+    </head>
+    <body>
+        <!-- This is a comment -->
+        <h1 class="title">Hello World!</h1>
+        <p>This is a paragraph.</p>
+        <br/>
+    </body>
+</html>
+
+<div>
+    <!-- Another comment -->
+    <p>Visible text</p>
+</div>
+
+<body>
+    <p>First line<br>Second line</p>
+    <img src="photo.jpg">
+    <input type="text" disabled>
+</body>
+
+<div class="container" id="main">
+    <a href="https://example.com" title="A > B">Click here</a>
+    <img src="image.png" alt="A picture"/>
+</div>
+
+<pre>
+    First line
+        Second line
+
+    Fourth line
+</pre>
+
 <p>Hello<strong>very</strong>important<em>!</em></p>
 <p title='hello > world'>Text</p>
 )";
 
     Tokenizer tokenizer;
 
-    std::vector<Token> tokens = tokenizer.tokenize(html);
+    std::vector<Token> tokens = tokenizer.tokenize(teststring);
     
     for (const Token& token : tokens) {
         std::cout <<"[" << tokenTypeName(token.type) << "] ";
