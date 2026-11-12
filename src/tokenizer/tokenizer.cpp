@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace minihtml {
 
@@ -51,7 +52,7 @@ std::string readText(const std::string& html, size_t& pos) {
     size_t start = pos;
 
     while(pos < html.size() && html[pos] != '<') {
-        pos++;
+        ++pos;
     }
 
     return html.substr(start, pos - start);
@@ -69,7 +70,7 @@ TokenType classifyTag(const std::string& tag) {
 
     while (end > 0 &&
             std::isspace(static_cast<unsigned char>(tag[end - 1]))) {
-        end--;
+        --end;
     }
 
     if (end > 0 && tag[end - 1] == '/') {
@@ -77,6 +78,87 @@ TokenType classifyTag(const std::string& tag) {
     }
 
     return TokenType::StartTag;
+}
+
+std::string toLowerCase(std::string str) {
+    for (char& c : str) {
+        c = static_cast<char>(
+            std::tolower(static_cast<unsigned char>(c))
+        );
+    }
+
+    return str;
+}
+
+void parseAttributes(Token& token) {
+    const std::string tag = token.value;
+    size_t pos = 0;
+
+    if (pos < tag.size() && tag[pos] == '<') ++pos;
+    if (pos < tag.size() && tag[pos] == '/') ++pos;
+
+    auto skipWhiteSpace = [&]() {
+        while (pos < tag.size() && 
+                std::isspace(static_cast<unsigned char>(tag[pos])))
+            ++pos;
+    };
+
+    // read until ' ', '=', '/', '>'
+    auto readSegment = [&]() {
+        size_t start = pos;
+        while (pos < tag.size() && 
+                !std::isspace(static_cast<unsigned char>(tag[pos])) &&
+                tag[pos] != '=' && tag[pos] != '>' && tag[pos] != '/')
+            ++pos;
+        return tag.substr(start, pos - start);
+    };
+
+    skipWhiteSpace();
+    token.tagName = toLowerCase(readSegment());
+
+    if (token.type == TokenType::EndTag) return;
+
+    while (pos < tag.size()) {
+        skipWhiteSpace();
+        if (pos >= tag.size() || tag[pos] == '>') break;
+
+        if (tag[pos] == '/') {
+            ++pos; 
+            continue;
+        }
+
+        std::string attrName = readSegment();
+        if (attrName.empty()) {
+            ++pos;
+            continue;
+        }
+
+        skipWhiteSpace();
+        std::string attrValue;
+
+        if (pos < tag.size() && tag[pos] == '=') {
+            ++pos;
+            skipWhiteSpace();
+
+            if (pos < tag.size() && (tag[pos] == '"' || tag[pos] == '\'')) {
+                char quote = tag[pos++];
+                size_t valStart = pos;
+                while (pos < tag.size() && tag[pos] != quote) pos++;
+                attrValue = tag.substr(valStart, pos - valStart);
+                if (pos < tag.size()) ++pos;
+            } else {
+                size_t valStart = pos;
+                while (pos < tag.size() && 
+                        !std::isspace(static_cast<unsigned char>(tag[pos])) &&
+                        tag[pos] != '>') {
+                    ++pos;            
+                }
+                attrValue = tag.substr(valStart, pos - valStart);
+            }
+        }
+
+        token.attributes.emplace_back(std::move(attrName), std::move(attrValue));
+    }
 }
 }
 
@@ -105,10 +187,12 @@ std::vector<Token> Tokenizer::tokenize(const std::string& html) {
         else if (html[pos] == '<') {
             std::string tag = readTag(html, pos);
             
-            tokens.push_back({
-                classifyTag(tag),
-                tag
-            });
+            Token token;
+            token.type = classifyTag(tag);
+            token.value = tag;
+
+            parseAttributes(token);
+            tokens.push_back(token);
         }
         
         // Text

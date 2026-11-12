@@ -1,4 +1,4 @@
-#include "tokenizer.h"
+#include "tokenizer/tokenizer.h"
 
 #include <iostream>
 #include <string>
@@ -89,15 +89,22 @@ int main() {
     std::vector<Token> tokens = tokenizer.tokenize(teststring);
     
     for (const Token& token : tokens) {
-        std::cout <<"[" << tokenTypeName(token.type) << "] ";
+        std::cout << "[" << tokenTypeName(token.type) << "] ";
 
-        if (token.type == TokenType::Text) {
-            std::cout << "\"" << escapeWhitespace(token.value) << "\"";
-        } else {
-            std::cout << token.value;
+        if (token.type == TokenType::Text ||
+            token.type == TokenType::Comment ||
+            token.type == TokenType::Doctype) {
+
+            std::cout << escapeWhitespace(token.value) << '\n';
+            continue;
         }
-        
-        std::cout << '\n';
+
+        std::cout << "Tag: " << token.tagName << '\n';
+
+        for (const auto& [name, value] : token.attributes) {
+            std::cout << "    Attribute: " << name
+                    << " = \"" << value << "\"\n";
+        }
     }
 
     return 0;

@@ -16,6 +16,8 @@ namespace minihtml {
     struct Token {
         TokenType type;
         std::string value;
+        std::string tagName;
+        std::vector<std::pair<std::string, std::string>> attributes;
     };
 
     class Tokenizer {
