@@ -11,17 +11,15 @@ namespace {
 
 // Read comments from <!-- to -->
 std::string readComment(const std::string& html, size_t& pos) {
-    size_t start = pos;
+    size_t start = pos + 4;
     size_t end = html.find("-->", start);
 
     if (end == std::string::npos) {
         pos = html.size();
+        return html.substr(start);
     } 
-    else {
-        pos = end + 3; // Move past the comment
-    }
-
-    return html.substr(start, pos - start);
+    pos = end + 3; // Move past the comment
+    return html.substr(start, end - start);
 }
 
 // Read tags from < to > while respecting quotation marks
@@ -29,7 +27,7 @@ std::string readTag(const std::string& html, size_t& pos) {
     size_t start = pos;
     char quote = '\0';
 
-    // Track whether we're in an attribute value
+    // Ignore > in quotes
     while (pos < html.size()) {
         char c = html[pos++];
 
@@ -51,18 +49,15 @@ std::string readTag(const std::string& html, size_t& pos) {
 std::string readText(const std::string& html, size_t& pos) {
     size_t start = pos;
 
-    while(pos < html.size() && html[pos] != '<') {
+    while (pos < html.size() && html[pos] != '<') {
         ++pos;
     }
 
     return html.substr(start, pos - start);
 }
 
-// Classify tags as start/end/self-closing
 TokenType classifyTag(const std::string& tag) {
     if (tag.substr(0, 2) == "</") return TokenType::EndTag;
-    
-    // Make sure the tag has >
     if (tag.empty() || tag.back() != '>') return TokenType::StartTag;
 
     // Ignore whitespace before closing >
@@ -127,7 +122,7 @@ void parseAttributes(Token& token) {
             continue;
         }
 
-        std::string attrName = readSegment();
+        std::string attrName = toLowerCase(readSegment());
         if (attrName.empty()) {
             ++pos;
             continue;
@@ -174,7 +169,6 @@ std::vector<Token> Tokenizer::tokenize(const std::string& html) {
                 readComment(html, pos)
             });
         }
-
         // Doctype
         else if (html.compare(pos, 9, "<!DOCTYPE") == 0) {
             tokens.push_back({
@@ -182,7 +176,6 @@ std::vector<Token> Tokenizer::tokenize(const std::string& html) {
                 readTag(html, pos)
             });
         }
-
         // Tag
         else if (html[pos] == '<') {
             std::string tag = readTag(html, pos);
@@ -194,7 +187,6 @@ std::vector<Token> Tokenizer::tokenize(const std::string& html) {
             parseAttributes(token);
             tokens.push_back(token);
         }
-        
         // Text
         else {
             tokens.push_back({

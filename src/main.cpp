@@ -1,4 +1,6 @@
 #include "tokenizer/tokenizer.h"
+#include "dom/dom.h"
+#include "parser/parser.h"
 
 #include <iostream>
 #include <string>
@@ -38,6 +40,25 @@ std::string escapeWhitespace(const std::string& text) {
     }
 
     return result;
+}
+
+void printDom(const minihtml::Node* node, int depth = 0) {
+    std::string indent(depth * 2, ' ');
+
+    if (node->type == minihtml::NodeType::Element) {
+        std::cout << indent << "Element: <" << node->tagName << ">\n";
+        for (const auto& attr : node->attributes) {
+            std::cout << indent << "  Attr: " << attr.first << " = \"" << attr.second << "\"\n";
+        }
+    } else if (node->type == minihtml::NodeType::Text) {
+        std::cout << indent << "Text: \"" << escapeWhitespace(node->value) << "\"\n";
+    } else if (node->type == minihtml::NodeType::Comment) {
+        std::cout << indent << "Comment: <!--" << node->value << "-->\n";
+    }
+
+    for (const auto& child : node->children) {
+        printDom(child.get(), depth + 1);
+    }
 }
 
 int main() {
@@ -85,10 +106,11 @@ int main() {
 )";
 
     Tokenizer tokenizer;
+    Parser parser;
 
     std::vector<Token> tokens = tokenizer.tokenize(teststring);
     
-    for (const Token& token : tokens) {
+    /*for (const Token& token : tokens) {
         std::cout << "[" << tokenTypeName(token.type) << "] ";
 
         if (token.type == TokenType::Text ||
@@ -105,7 +127,10 @@ int main() {
             std::cout << "    Attribute: " << name
                     << " = \"" << value << "\"\n";
         }
-    }
+    }*/
+
+    auto rootNode = parser.parse(tokens);
+    printDom(rootNode.get());
 
     return 0;
 }
